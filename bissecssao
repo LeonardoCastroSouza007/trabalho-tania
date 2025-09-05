@@ -1,0 +1,75 @@
+<?php
+function evalExpr($expr, $x) {
+    // Segurança: aceitar só números, x e operadores básicos
+    $expr = str_replace("x", "($x)", $expr);
+    return eval("return ".$expr.";");
+}
+
+function bisseccao($expr, $a, $b, $tol=1e-6, $maxIter=100) {
+    $fa = evalExpr($expr, $a);
+    $fb = evalExpr($expr, $b);
+    if ($fa * $fb > 0) return [null, []];
+
+    $history = [];
+    for ($k=0; $k<$maxIter; $k++) {
+        $m = ($a + $b) / 2.0;
+        $fm = evalExpr($expr, $m);
+        $history[] = [$k+1, $a, $b, $m, $fm];
+
+        if (abs($fm) < $tol || ($b - $a)/2 < $tol) return [$m, $history];
+
+        if ($fa * $fm < 0) {
+            $b = $m; $fb = $fm;
+        } else {
+            $a = $m; $fa = $fm;
+        }
+    }
+    return [($a+$b)/2, $history];
+}
+
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $expr = $_POST["expr"];
+    $a = floatval($_POST["a"]);
+    $b = floatval($_POST["b"]);
+    $tol = floatval($_POST["tol"]);
+    $maxIter = intval($_POST["maxIter"]);
+
+    [$raiz, $history] = bisseccao($expr, $a, $b, $tol, $maxIter);
+}
+?>
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Bissecção</title></head>
+<body>
+<h1>Método da Bissecção</h1>
+<form method="post">
+    Função f(x): <input type="text" name="expr" value="x**3 - x - 2"><br>
+    Intervalo a: <input type="text" name="a" value="1"><br>
+    Intervalo b: <input type="text" name="b" value="2"><br>
+    Tolerância: <input type="text" name="tol" value="1e-6"><br>
+    Máx Iterações: <input type="number" name="maxIter" value="100"><br>
+    <button type="submit">Calcular</button>
+</form>
+
+<?php if (isset($raiz)): ?>
+    <?php if ($raiz === null): ?>
+        <p>Não é possível aplicar bissecção: f(a) e f(b) têm o mesmo sinal.</p>
+    <?php else: ?>
+        <h2>Resultado</h2>
+        <p>Raiz aproximada: <?php echo $raiz; ?></p>
+        <table border="1">
+            <tr><th>Iter</th><th>a</th><th>b</th><th>m</th><th>f(m)</th></tr>
+            <?php foreach ($history as $row): ?>
+                <tr>
+                    <td><?php echo $row[0]; ?></td>
+                    <td><?php echo $row[1]; ?></td>
+                    <td><?php echo $row[2]; ?></td>
+                    <td><?php echo $row[3]; ?></td>
+                    <td><?php echo $row[4]; ?></td>
+                </tr>
+            <?php endforeach; ?>
+        </table>
+    <?php endif; ?>
+<?php endif; ?>
+</body>
+</html>
